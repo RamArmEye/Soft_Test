@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BuckyBall_Concentration Timer</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            height: 100vh;
+            background-color: #222;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+        }
+        .control-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            color: red;
+        }
+        .principle {
+            font-size: 20px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            color: white;
+        }
+        .timer {
+            color: white;
+            font-size: 40px;
+            margin-top: 20px;
+            margin-bottom: 10px; /* Added margin bottom */
+        }
+        .concentration-log {
+            color: white;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .button-panel {
+            display: flex;
+            gap: 10px;
+        }
+        .square-button {
+            width: 70px; /* Square button */
+            height: 70px; /* Square button */
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            border: none; /* No border */
+            border-radius: 5px;
+            font-size: 16px; /* Added font size */
+            display: flex; /* Center text */
+            justify-content: center; /* Center text */
+            align-items: center; /* Center text */
+        }
+        .timer-panel {
+            position: fixed;
+            top: 70px;
+            right: 40px;
+            display: flex;
+            gap: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .logo {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 100px;
+        }
+        .logo1 {
+            position: fixed;
+            top: 90px;
+            left: 20px;
+            width: 140px;
+        }
+    </style>
+</head>
+<body>
+    
+     <a href="https://aws.amazon.com/" target="_blank">
+    <img src="https://logos-world.net/wp-content/uploads/2021/08/Amazon-Web-Services-AWS-Logo.png" alt="AWS Logo" class="logo"style="height: auto;">
+    </a>
+     <a href="https://www.youtube.com/watch?v=el3v8rOG1UQ&list=RDEMdmBgi8bvEoGQ69bdOyQcew&start_radio=1&rv=zJ6qHBz2q7w" target="_blank">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/e/e1/Logo_of_YouTube_%282015-2017%29.svg" alt="Youtube Logo" class="logo1"style="height: auto;">
+    </a>
+    
+    <div class="timer" id="timer">Concentration Time: 25:00</div>
+    <div class="concentration-log" id="concentrationLog">Total Concentration Time: 0 hours</div>
+    <div class="control-panel" id="controlPanel">
+        <div class="slider-container">
+            <label for="concentrationTimeSlider">Concentration Time (min):</label>
+            <input type="range" id="concentrationTimeSlider" min="1" max="60" step="5" value="25">
+            <span id="concentrationTimeDisplay">25</span>
+        </div>
+        <div class="slider-container">
+            <label for="breakTimeSlider">Break Time (min):</label>
+            <input type="range" id="breakTimeSlider" min="0.5" max="30" step="1" value="10">
+            <span id="breakTimeDisplay">5</span>
+        </div>
+        <div class="slider-container">
+            <label for="sizeSlider">BuckyBall Size:</label>
+            <input type="range" id="sizeSlider" min="1" max="10" step="0.1" value="5">
+            <span id="sizeDisplay">5</span>
+        </div>
+        <div class="slider-container">
+            <label for="speedSlider">Speed:</label>
+            <input type="range" id="speedSlider" min="0.05" max="5" step="0.1" value="1" title="Adjust Speed">
+            <span id="speedDisplay">1</span>
+        </div>
+        <button id="randomColors">Random Colors</button>
+        <button id="bwColors">B&W Colors</button>
+    </div>
+    <div class="timer-panel">
+        <button class="square-button" id="startTimer">Start</button>
+        <button class="square-button" id="stopTimer">Stop</button>
+        <button class="square-button" id="resetTimer">Reset</button>
+        <button class="square-button" id="toggleButton">Toggle</button>
+    </div>
+    <div class="principle" id="principle">Customer Obsession</div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+
+    <script>
+        const principles = [
+            "Customer Obsession",
+            "Ownership",
+            "Invent and Simplify",
+            "Are Right, A Lot",
+            "Learn and Be Curious",
+            "Hire and Develop the Best",
+            "Insist on the Highest Standards",
+            "Think Big",
+            "Bias for Action",
+            "Frugality",
+            "Earn Trust",
+            "Dive Deep",
+            "Have Backbone; Disagree and Commit",
+            "Deliver Results",
+            "Strive to be Earth’s Best Employer",
+            "Success and Scale Bring Broad Responsibility"
+        ];
+
+        let currentIndex = 0;
+        let speed = 0.2;
+        let isBreak = false;
+        let concentrationTime = 25 * 60;
+        let breakTime = 5 * 60;
+        let timer = concentrationTime;
+        let totalConcentrationSeconds = 0;
+        let interval;
+        let isRunning = false;
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        let geometry = new THREE.IcosahedronGeometry(5, 1);
+        let material = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
+        let buckyball = new THREE.Mesh(geometry, material);
+        scene.add(buckyball);
+
+        camera.position.z = 15;
+
+        const principleDisplay = document.getElementById('principle');
+        const timerDisplay = document.getElementById('timer');
+        const concentrationLogDisplay = document.getElementById('concentrationLog');
+        const concentrationTimeSlider = document.getElementById('concentrationTimeSlider');
+        const concentrationTimeDisplay = document.getElementById('concentrationTimeDisplay');
+        const breakTimeSlider = document.getElementById('breakTimeSlider');
+        const breakTimeDisplay = document.getElementById('breakTimeDisplay');
+        const sizeSlider = document.getElementById('sizeSlider');
+        const sizeDisplay = document.getElementById('sizeDisplay');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedDisplay = document.getElementById('speedDisplay');
+        const randomColorsButton = document.getElementById('randomColors');
+        const bwColorsButton = document.getElementById('bwColors');
+        const startTimerButton = document.getElementById('startTimer');
+        const stopTimerButton = document.getElementById('stopTimer');
+        const resetTimerButton = document.getElementById('resetTimer');
+        const toggleButton = document.getElementById('toggleButton');
+        const controlPanel = document.getElementById('controlPanel');
+
+        toggleButton.addEventListener('click', () => {
+            controlPanel.style.display = controlPanel.style.display === 'none' ? 'flex' : 'none';
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (!isBreak) {
+                buckyball.rotation.x += 0.01 * speed;
+                buckyball.rotation.y += 0.01 * speed;
+            }
+            renderer.render(scene, camera);
+        }
+
+        function getRandomPrinciple() {
+            const randomIndex = Math.floor(Math.random() * principles.length);
+            return principles[randomIndex];
+        }
+
+        function updatePrinciple() {
+            principleDisplay.textContent = getRandomPrinciple();
+        }
+
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        function updateTimer() {
+            if (timer > 0) {
+                timer--;
+                updateBuckyBallColor();
+                timerDisplay.textContent = `${isBreak ? 'Break' : 'Concentration'} Time: ${formatTime(timer)}`;
+            } else {
+                if (isBreak) {
+                    isBreak = false;
+                    stopTimer();
+                    timer = concentrationTime; // Reset to concentration time but do not start
+                } else {
+                    isBreak = true;
+                    totalConcentrationSeconds += concentrationTime;
+                    const totalConcentrationHours = (totalConcentrationSeconds / 3600).toFixed(2);
+                    const currentDate = new Date().toLocaleDateString();
+                    concentrationLogDisplay.textContent = `Total Concentration Time: ${totalConcentrationHours} hours (Last updated: ${currentDate})`;
+                    timer = breakTime;
+                    startTimer(); // Start break automatically
+                }
+                updatePrinciple();
+            }
+        }
+
+        function startTimer() {
+            if (!isRunning) {
+                interval = setInterval(updateTimer, 1000);
+                isRunning = true;
+            }
+        }
+
+        function stopTimer() {
+            clearInterval(interval);
+            isRunning = false;
+        }
+
+        function resetTimer() {
+            stopTimer();
+            isBreak = false;
+            timer = concentrationTime;
+            timerDisplay.textContent = `Concentration Time: ${formatTime(timer)}`;
+            updateBuckyBallColor();
+        }
+
+        function updateBuckyBallColor() {
+            const fraction = timer / concentrationTime;
+            const colorValue = Math.floor(fraction * 255);
+            const color = `rgb(${255 - colorValue}, ${colorValue}, 0)`;
+            buckyball.material.color.set(color);
+        }
+
+        startTimerButton.addEventListener('click', startTimer);
+        stopTimerButton.addEventListener('click', stopTimer);
+        resetTimerButton.addEventListener('click', resetTimer);
+
+        speedSlider.addEventListener('input', (e) => {
+            speed = e.target.value;
+            speedDisplay.textContent = speed;
+        });
+
+        randomColorsButton.addEventListener('click', () => {
+            const colors = [
+                '#000000', '#FFFFFF', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#00FFFF', '#FF00FF',
+                '#C0C0C0', '#808080', '#800000', '#808000', '#008000', '#800080', '#008080', '#000080',
+                '#FFA500', '#A52A2A', '#8A2BE2', '#DEB887', '#5F9EA0', '#7FFF00', '#D2691E', '#FF7F50',
+                '#6495ED', '#DC143C', '#00FA9A', '#FFD700', '#ADFF2F', '#4B0082'
+            ];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            buckyball.material.color.set(color);
+            principleDisplay.style.color = color;
+            timerDisplay.style.color = color;
+            concentrationLogDisplay.style.color = color;
+        });
+
+        bwColorsButton.addEventListener('click', () => {
+            buckyball.material.color.set(0xffffff);
+            principleDisplay.style.color = 'white';
+            timerDisplay.style.color = 'white';
+            concentrationLogDisplay.style.color = 'white';
+        });
+
+        concentrationTimeSlider.addEventListener('input', (e) => {
+            const value = e.target.value;
+            concentrationTime = value * 60;
+            concentrationTimeDisplay.textContent = value;
+            if (!isBreak) {
+                timer = concentrationTime;
+                timerDisplay.textContent = `Concentration Time: ${formatTime(timer)}`;
+                updateBuckyBallColor();
+            }
+        });
+
+        breakTimeSlider.addEventListener('input', (e) => {
+            const value = e.target.value;
+            breakTime = value * 60;
+            breakTimeDisplay.textContent = value;
+            if (isBreak) {
+                timer = breakTime;
+                timerDisplay.textContent = `Break Time: ${formatTime(timer)}`;
+            }
+        });
+
+        sizeSlider.addEventListener('input', (e) => {
+            const value = e.target.value;
+            sizeDisplay.textContent = value;
+            scene.remove(buckyball);
+            geometry = new THREE.IcosahedronGeometry(value, 1);
+            buckyball = new THREE.Mesh(geometry, material);
+            scene.add(buckyball);
+        });
+
+        setInterval(updatePrinciple, 3000); // Update principle every 3 seconds
+        animate();
+    </script>
+</body>
+</html>
